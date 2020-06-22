@@ -1,0 +1,2 @@
+rootProject.name='Phoshare'
+include ':app'
