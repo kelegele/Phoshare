@@ -24,7 +24,7 @@ import com.kelegele.phoshare.adapter.FeedAdapter;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFeedItemClickListener {
+public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFeedItemClickListener{
 
     private static final int ANIM_DURATION_TOOLBAR = 300;
     private static final int ANIM_DURATION_FAB = 400;
@@ -135,5 +135,9 @@ public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFe
 
         startActivity(intent);
         overridePendingTransition(0, 0);
+    }
+
+    @Override
+    public void onProfileClick(View v) {
     }
 }
