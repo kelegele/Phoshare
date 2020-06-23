@@ -7,9 +7,11 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.animation.OvershootInterpolator;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -22,7 +24,7 @@ import com.kelegele.phoshare.adapter.FeedAdapter;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFeedItemClickListener {
 
     private static final int ANIM_DURATION_TOOLBAR = 300;
     private static final int ANIM_DURATION_FAB = 400;
@@ -33,18 +35,15 @@ public class MainActivity extends AppCompatActivity {
 
     @BindView(R.id.btnCreate)
     ImageButton btnCreate;
-    @BindView(R.id.toolbar)
-    Toolbar toolbar;
+
     @BindView(R.id.rvFeed)
     RecyclerView rvFeed;
-    @BindView(R.id.ivLogo)
-    ImageView ivLogo;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        ButterKnife.bind(this);
 
         setupToolbar();
         setupFeed();
@@ -54,16 +53,23 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void setupToolbar() {
-        setSupportActionBar(toolbar);
-        toolbar.setNavigationIcon(R.drawable.ic_menu_white);
-    }
+//    private void setupToolbar() {
+//        setSupportActionBar(toolbar);
+//        toolbar.setNavigationIcon(R.drawable.ic_menu_white);
+//    }
 
     private void setupFeed() {
-        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this){
+            @Override
+            protected int getExtraLayoutSpace(RecyclerView.State state) {
+                return 300;
+            }
+        };
         rvFeed.setLayoutManager(linearLayoutManager);
         feedAdapter = new FeedAdapter(this);
         rvFeed.setAdapter(feedAdapter);
+
+        feedAdapter.setOnFeedItemClickListener(this);
     }
 
     @Override
@@ -116,5 +122,18 @@ public class MainActivity extends AppCompatActivity {
                 .setDuration(ANIM_DURATION_FAB)
                 .start();
         feedAdapter.updateItems();
+    }
+
+    @Override
+    public void onCommentsClick(View v, int position) {
+        final Intent intent = new Intent(this, CommentsActivity.class);
+
+        //Get location on screen for tapped view
+        int[] startingLocation = new int[2];
+        v.getLocationOnScreen(startingLocation);
+        intent.putExtra(CommentsActivity.ARG_DRAWING_START_LOCATION, startingLocation[1]);
+
+        startActivity(intent);
+        overridePendingTransition(0, 0);
     }
 }
