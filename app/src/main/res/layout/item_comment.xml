@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
+    android:layout_gravity="center"
     android:layout_height="wrap_content">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingBottom="8dp"
-        android:paddingTop="8dp">
+        android:paddingVertical="16dp">
 
         <ImageView
             android:id="@+id/ivUserAvatar"
@@ -19,20 +19,40 @@
             android:background="@drawable/bg_comment_avatar"
             android:contentDescription="TODO" />
 
-        <TextView
-            android:id="@+id/tvComment"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_marginEnd="16dp"
-            android:layout_weight="1"
-            android:text="Lorem ipsum dolor sit amet" />
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvCommentUserName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_marginEnd="16dp"
+                android:textSize="16sp"
+                android:textColor="@color/style_color_primary"
+                android:layout_weight="1"
+                android:text="username" />
+
+            <TextView
+                android:id="@+id/tvComment"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_marginTop="13dp"
+                android:layout_marginEnd="16dp"
+                android:layout_weight="2"
+                android:text="Lorem ipsum dolor sit amet" />
+        </LinearLayout>
+
+
     </LinearLayout>
 
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_gravity="bottom"
-        android:layout_marginStart="88dp"
+        android:layout_marginHorizontal="20dp"
         android:background="#cccccc" />
 </FrameLayout>

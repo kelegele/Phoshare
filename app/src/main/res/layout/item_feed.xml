@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?><!-- item_feed.xml -->
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:card_view="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/card_view"
+    android:id="@+id/cardView"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_gravity="center"
@@ -13,11 +13,27 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <ImageView
-            android:id="@+id/ivUserProfile"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_feed_top" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:id="@+id/ivOwnerAvatar"
+                android:layout_width="@dimen/feed_owner_avatar_size"
+                android:layout_height="@dimen/feed_owner_avatar_size"
+                android:layout_marginVertical="8dp"
+                android:layout_marginHorizontal="16dp"/>
+
+            <TextView
+                android:id="@+id/tvUserName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/style_color_primary"
+                android:layout_gravity="center"
+                android:textSize="16sp"
+                android:text="username"/>
+
+        </LinearLayout>
 
         <com.kelegele.phoshare.view.SquaredFrameLayout
             android:id="@+id/vImageRoot"
@@ -47,16 +63,16 @@
 
         </com.kelegele.phoshare.view.SquaredFrameLayout>
 
-<!--        <com.kelegele.phoshare.view.SquaredImageView-->
-<!--            android:id="@+id/ivFeedCenter"-->
-<!--            android:layout_width="match_parent"-->
-<!--            android:layout_height="wrap_content" />-->
-
-        <ImageView
-            android:id="@+id/ivFeedBottom"
+        <TextView
+            android:id="@+id/tvFeedBottom"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="12dp"
+            android:layout_marginVertical="16dp"
+            android:textSize="16sp"
+            android:text="图片描述......我是图片描述，描述上面的图片，我需要分行，所以写了这么多。看起来分行了呢，那我该停下了。：）"
             android:contentDescription="@string/todo" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -100,7 +116,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="123 likes"
+                        android:text="0 likes"
                         android:textColor="@color/text_like_counter" />
 
                     <TextView

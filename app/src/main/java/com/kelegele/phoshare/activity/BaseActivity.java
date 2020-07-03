@@ -12,6 +12,8 @@ import com.kelegele.phoshare.R;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import cn.leancloud.AVLogger;
+import cn.leancloud.AVOSCloud;
 
 public class BaseActivity extends AppCompatActivity {
     @Nullable
@@ -47,12 +49,12 @@ public class BaseActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        inboxMenuItem = menu.findItem(R.id.action_inbox);
-        inboxMenuItem.setActionView(R.layout.menu_item_view);
-        return true;
+    public void initAVOSCloud(){
+        AVOSCloud.setLogLevel(AVLogger.Level.DEBUG);
+        AVOSCloud.initialize(this,
+                "p0JvNtCX7OeLusJrjaNG3MGF-gzGzoHsz",
+                "CPNJUKwWFGyOfhVYUCH5BJtQ",
+                "https://p0jvntcx.lc-cn-n1-shared.com");
     }
 
     public Toolbar getToolbar() {
@@ -66,4 +68,5 @@ public class BaseActivity extends AppCompatActivity {
     public ImageView getIvLogo() {
         return ivLogo;
     }
+
 }

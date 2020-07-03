@@ -4,6 +4,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
+import android.app.Activity;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,25 +16,43 @@ import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextSwitcher;
+import android.widget.TextView;
 
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.kelegele.phoshare.R;
-import com.kelegele.phoshare.view.SquaredImageView;
 import com.kelegele.phoshare.Utils;
+import com.kelegele.phoshare.activity.LoginActivity;
+import com.kelegele.phoshare.utils.CircleTransformation;
+import com.squareup.picasso.MemoryPolicy;
+import com.squareup.picasso.Picasso;
 
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.util.Objects;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import cn.leancloud.AVFile;
+import cn.leancloud.AVObject;
+import cn.leancloud.AVQuery;
+import cn.leancloud.AVUser;
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
 
-public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements View.OnClickListener{
+import static com.kelegele.phoshare.Utils.isFastClick;
+
+public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements View.OnClickListener {
     private static final int ANIMATED_ITEMS_COUNT = 2;
+
+    private static final int LIKE_ADD = 0;
+    private static final int LIKE_SUB = 1;
+    private static final int LIKE_SETUP = 2;
+
 
     private static final DecelerateInterpolator DECCELERATE_INTERPOLATOR = new DecelerateInterpolator();
     private static final AccelerateInterpolator ACCELERATE_INTERPOLATOR = new AccelerateInterpolator();
@@ -48,11 +67,12 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
     private Context context;
     private int lastAnimatedPosition = -1;
     private int itemsCount = 0;
+    private List<AVObject> feedList;
 
     @BindView(R.id.ivFeedCenter)
     ImageView ivFeedCenter;
-    @BindView(R.id.ivFeedBottom)
-    ImageView ivFeedBottom;
+    @BindView(R.id.tvFeedBottom)
+    TextView tvFeedBottom;
     @BindView(R.id.btnComments)
     ImageButton btnComments;
     @BindView(R.id.btnLike)
@@ -63,6 +83,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
     ImageView ivLike;
     @BindView(R.id.tsLikesCounter)
     TextSwitcher tsLikesCounter;
+
 
     public FeedAdapter(Context context) {
         this.context = context;
@@ -76,50 +97,89 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
         cellFeedViewHolder.btnComments.setOnClickListener(this);
         cellFeedViewHolder.ivFeedCenter.setOnClickListener(this);
         cellFeedViewHolder.btnLike.setOnClickListener(this);
-        cellFeedViewHolder.ivUserProfile.setOnClickListener(this);
+        cellFeedViewHolder.ivOwnerAvatar.setOnClickListener(this);
         return cellFeedViewHolder;
     }
 
-    private void runEnterAnimation(View view, int position) {
-        if (position >= ANIMATED_ITEMS_COUNT - 1) {
-            return;
-        }
-
-        if (position > lastAnimatedPosition) {
-            lastAnimatedPosition = position;
-            view.setTranslationY(Utils.getScreenHeight(context));
-            view.animate()
-                    .translationY(0)
-                    .setInterpolator(new DecelerateInterpolator(3.f))
-                    .setDuration(700)
-                    .start();
-        }
-    }
-
     @Override
-    public void onBindViewHolder(RecyclerView.ViewHolder viewHolder, int position) {
+    public void onBindViewHolder(@NotNull RecyclerView.ViewHolder viewHolder, int position) {
         runEnterAnimation(viewHolder.itemView, position);
         CellFeedViewHolder holder = (CellFeedViewHolder) viewHolder;
-        if (position % 2 == 0) {
-            holder.ivFeedCenter.setImageResource(R.drawable.img_feed_center_1);
-            holder.ivFeedBottom.setImageResource(R.drawable.img_feed_bottom_1);
+
+
+        AVObject item = feedList.get(position);
+        holder.tvUserName.setText(item.getString("ownerName"));
+
+        AVFile avatarFile = item.getAVFile("ownerAvatar");
+        String avatarUrl = null;
+        int avatarSize = context.getResources().getDimensionPixelSize(R.dimen.feed_owner_avatar_size);
+        if (avatarFile == null) {
+            avatarUrl = context.getResources().getString(R.string.user_profile_photo);
         } else {
-            holder.ivFeedCenter.setImageResource(R.drawable.img_feed_center_2);
-            holder.ivFeedBottom.setImageResource(R.drawable.img_feed_bottom_2);
+            avatarUrl = avatarFile.getUrl();
         }
 
-        //holder.ivFeedBottom.setOnClickListener(this);
-        //holder.ivFeedBottom.setTag(position);
+        //加载头像
+        Picasso.get()
+                .load(avatarUrl)
+                .placeholder(R.drawable.img_circle_placeholder)
+                .resize(avatarSize, avatarSize)
+                .centerCrop()
+                .transform(new CircleTransformation())
+                .into(holder.ivOwnerAvatar);
 
-        updateLikesCounter(holder, false);
+        //加载图片
+        AVFile imgFile = item.getAVFile("image");
+        if (imgFile == null) {
+            holder.ivFeedCenter.setImageResource(R.drawable.img_phoshare_black);
+        } else {
+            Picasso.get()
+                    .load(imgFile.getUrl())
+                    .placeholder(R.drawable.img_toolbar_logo)
+                    .fit()
+                    .centerCrop()
+                    .memoryPolicy(MemoryPolicy.NO_CACHE, MemoryPolicy.NO_STORE)
+                    .into(holder.ivFeedCenter);
+        }
+
+        //加载图片介绍
+        holder.tvFeedBottom.setText(item.getString("description"));
+
+        //获取feedCommentsId
+       holder.feedCommentsId = item.getAVObject("comments").getObjectId();
+
+
+        updateLikesCounter(holder, false, LIKE_SETUP);
         updateHeartButton(holder, false);
 
-        holder.btnComments.setTag(position);
+        AVQuery<AVObject> unlikeQuery = new AVQuery<>("Likes");
+        unlikeQuery.whereEqualTo("userLike", AVUser.getCurrentUser());
+        unlikeQuery.whereEqualTo("feedLiked",feedList.get(holder.getAdapterPosition()).getObjectId());
+        unlikeQuery.getFirstInBackground().subscribe(new Observer<AVObject>() {
+            @Override
+            public void onSubscribe(Disposable d) { }
+
+            @Override
+            public void onNext(AVObject avObject) {
+                if (!likedPositions.contains(holder.getAdapterPosition())) {
+                    likedPositions.add(holder.getAdapterPosition());
+                    updateHeartButton(holder, true);
+                }
+            }
+
+            @Override
+            public void onError(Throwable e) { }
+
+            @Override
+            public void onComplete() { }
+        });
+
+        holder.btnComments.setTag(holder);
         holder.ivFeedCenter.setTag(holder);
         holder.btnLike.setTag(holder);
 
         if (likeAnimations.containsKey(holder)) {
-            likeAnimations.get(holder).cancel();
+            Objects.requireNonNull(likeAnimations.get(holder)).cancel();
         }
         resetLikeAnimationState(holder);
     }
@@ -129,8 +189,76 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
         return itemsCount;
     }
 
-    private void updateLikesCounter(CellFeedViewHolder holder, boolean animated) {
-        int currentLikesCount = likesCount.get(holder.getPosition()) + 1;
+    private void updateLikesCounter(CellFeedViewHolder holder, boolean animated, int action) {
+
+        int currentLikesCount = likesCount.get(holder.getAdapterPosition());
+        AVObject toUpdate = AVObject.createWithoutData("Feeds", feedList.get(holder.getAdapterPosition()).getObjectId());
+
+        switch (action) {
+            case LIKE_ADD:
+                currentLikesCount++;
+                toUpdate.increment("likedCount", 1);
+                break;
+            case LIKE_SUB:
+                currentLikesCount--;
+                toUpdate.increment("likedCount", -1);
+                break;
+            case LIKE_SETUP:
+                break;
+            default:
+                break;
+        }
+
+        if (action == LIKE_ADD || action == LIKE_SUB) {
+            toUpdate.saveInBackground().subscribe(new Observer<AVObject>() {
+                @Override
+                public void onSubscribe(Disposable d) { }
+
+                @Override
+                public void onNext(AVObject avObject) {
+                    if(action == LIKE_ADD)
+                    {
+                        AVObject like = new AVObject("Likes");
+                        like.put("userLike", AVUser.getCurrentUser());
+                        like.put("feedLiked",feedList.get(holder.getAdapterPosition()).getObjectId());
+                        like.put("feedOwner",feedList.get(holder.getAdapterPosition()).get("owner"));
+                        like.saveInBackground().subscribe();
+                    }
+                    else if(action == LIKE_SUB)
+                    {
+                        AVQuery<AVObject> unlikeQuery = new AVQuery<>("Likes");
+                        unlikeQuery.whereEqualTo("userLike", AVUser.getCurrentUser());
+                        unlikeQuery.whereEqualTo("feedLiked",feedList.get(holder.getAdapterPosition()).getObjectId());
+                        unlikeQuery.getFirstInBackground().subscribe(new Observer<AVObject>() {
+                            @Override
+                            public void onSubscribe(Disposable d) { }
+
+                            @Override
+                            public void onNext(AVObject todo) {
+                                String unlikeId = todo.getObjectId();
+                                AVObject unlikeObj = AVObject.createWithoutData("Likes",unlikeId);
+                                unlikeObj.deleteInBackground().subscribe();
+                            }
+
+                            @Override
+                            public void onError(Throwable e) { }
+
+                            @Override
+                            public void onComplete() { }
+                        });
+                    }
+
+                }
+
+                @Override
+                public void onError(Throwable e) { }
+
+                @Override
+                public void onComplete() { }
+            });
+
+        }
+
         String likesCountText = context.getResources().getQuantityString(
                 R.plurals.likes_count, currentLikesCount, currentLikesCount
         );
@@ -141,14 +269,22 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
             holder.tsLikesCounter.setCurrentText(likesCountText);
         }
 
-        likesCount.put(holder.getPosition(), currentLikesCount);
+
+//        AVObject feed = feedList.get(position);
+//        feed.increment("likedCount",sum);
+//        feed.save();
+
+
+        likesCount.put(holder.getAdapterPosition(), currentLikesCount);
     }
+
+
 
     public static class CellFeedViewHolder extends RecyclerView.ViewHolder {
         @BindView(R.id.ivFeedCenter)
         ImageView ivFeedCenter;
-        @BindView(R.id.ivFeedBottom)
-        ImageView ivFeedBottom;
+        @BindView(R.id.tvFeedBottom)
+        TextView tvFeedBottom;
         @BindView(R.id.btnComments)
         ImageButton btnComments;
         @BindView(R.id.btnLike)
@@ -159,28 +295,32 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
         ImageView ivLike;
         @BindView(R.id.tsLikesCounter)
         TextSwitcher tsLikesCounter;
-        @BindView(R.id.ivUserProfile)
-        ImageView ivUserProfile;
+        @BindView(R.id.tvUserName)
+        TextView tvUserName;
+        @BindView(R.id.ivOwnerAvatar)
+        ImageView ivOwnerAvatar;
         @BindView(R.id.vImageRoot)
         FrameLayout vImageRoot;
 
         FeedItem feedItem;
+
+        String feedCommentsId;
 
         public CellFeedViewHolder(View view) {
             super(view);
             ButterKnife.bind(this, view);
         }
 
-        public void bindView(FeedItem feedItem) {
-            this.feedItem = feedItem;
-            int adapterPosition = getAdapterPosition();
-            ivFeedCenter.setImageResource(adapterPosition % 2 == 0 ? R.drawable.img_feed_center_1 : R.drawable.img_feed_center_2);
-            ivFeedBottom.setImageResource(adapterPosition % 2 == 0 ? R.drawable.img_feed_bottom_1 : R.drawable.img_feed_bottom_2);
-            btnLike.setImageResource(feedItem.isLiked ? R.drawable.ic_heart_red : R.drawable.ic_heart_outline_grey);
-            tsLikesCounter.setCurrentText(vImageRoot.getResources().getQuantityString(
-                    R.plurals.likes_count, feedItem.likesCount, feedItem.likesCount
-            ));
-        }
+//        public void bindView(FeedItem feedItem) {
+//            this.feedItem = feedItem;
+//            int adapterPosition = getAdapterPosition();
+//            ivFeedCenter.setImageResource(adapterPosition % 2 == 0 ? R.drawable.img_feed_center_1 : R.drawable.img_feed_center_2);
+//            //ivFeedBottom.setImageResource(adapterPosition % 2 == 0 ? R.drawable.img_feed_bottom_1 : R.drawable.img_feed_bottom_2);
+//            btnLike.setImageResource(feedItem.isLiked ? R.drawable.ic_heart_red : R.drawable.ic_heart_outline_grey);
+//            tsLikesCounter.setCurrentText(vImageRoot.getResources().getQuantityString(
+//                    R.plurals.likes_count, feedItem.likesCount, feedItem.likesCount
+//            ));
+//        }
 
         public FeedItem getFeedItem() {
             return feedItem;
@@ -188,8 +328,11 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
     }
 
     public interface OnFeedItemClickListener {
-        public void onCommentsClick(View v, int position);
-        public void onProfileClick(View v);
+        void onCommentsClick(View v, String feedCommentId);
+
+        void onProfileClick(View v);
+
+        void onUpdateFeeds(View v);
     }
 
     private void updateHeartButton(final CellFeedViewHolder holder, boolean animated) {
@@ -229,7 +372,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
                 animatorSet.start();
             }
         } else {
-            if (likedPositions.contains(holder.getPosition())) {
+            if (likedPositions.contains(holder.getAdapterPosition())) {
                 holder.btnLike.setImageResource(R.drawable.ic_heart_red);
             } else {
                 holder.btnLike.setImageResource(R.drawable.ic_heart_outline_grey);
@@ -238,88 +381,123 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
     }
 
     private void animatePhotoLike(final CellFeedViewHolder holder) {
-        //if (!likeAnimations.containsKey(holder)) {
-            holder.vBgLike.setVisibility(View.VISIBLE);
-            holder.ivLike.setVisibility(View.VISIBLE);
+        holder.vBgLike.setVisibility(View.VISIBLE);
+        holder.ivLike.setVisibility(View.VISIBLE);
 
-            holder.vBgLike.setScaleY(0.1f);
-            holder.vBgLike.setScaleX(0.1f);
-            holder.vBgLike.setAlpha(1f);
-            holder.ivLike.setScaleY(0.1f);
-            holder.ivLike.setScaleX(0.1f);
+        holder.vBgLike.setScaleY(0.1f);
+        holder.vBgLike.setScaleX(0.1f);
+        holder.vBgLike.setAlpha(1f);
+        holder.ivLike.setScaleY(0.1f);
+        holder.ivLike.setScaleX(0.1f);
 
-            AnimatorSet animatorSet = new AnimatorSet();
-            likeAnimations.put(holder, animatorSet);
+        AnimatorSet animatorSet = new AnimatorSet();
+        likeAnimations.put(holder, animatorSet);
 
-            ObjectAnimator bgScaleYAnim = ObjectAnimator.ofFloat(holder.vBgLike, "scaleY", 0.1f, 1f);
-            bgScaleYAnim.setDuration(200);
-            bgScaleYAnim.setInterpolator(DECCELERATE_INTERPOLATOR);
-            ObjectAnimator bgScaleXAnim = ObjectAnimator.ofFloat(holder.vBgLike, "scaleX", 0.1f, 1f);
-            bgScaleXAnim.setDuration(200);
-            bgScaleXAnim.setInterpolator(DECCELERATE_INTERPOLATOR);
-            ObjectAnimator bgAlphaAnim = ObjectAnimator.ofFloat(holder.vBgLike, "alpha", 1f, 0f);
-            bgAlphaAnim.setDuration(200);
-            bgAlphaAnim.setStartDelay(150);
-            bgAlphaAnim.setInterpolator(DECCELERATE_INTERPOLATOR);
+        ObjectAnimator bgScaleYAnim = ObjectAnimator.ofFloat(holder.vBgLike, "scaleY", 0.1f, 1f);
+        bgScaleYAnim.setDuration(200);
+        bgScaleYAnim.setInterpolator(DECCELERATE_INTERPOLATOR);
+        ObjectAnimator bgScaleXAnim = ObjectAnimator.ofFloat(holder.vBgLike, "scaleX", 0.1f, 1f);
+        bgScaleXAnim.setDuration(200);
+        bgScaleXAnim.setInterpolator(DECCELERATE_INTERPOLATOR);
+        ObjectAnimator bgAlphaAnim = ObjectAnimator.ofFloat(holder.vBgLike, "alpha", 1f, 0f);
+        bgAlphaAnim.setDuration(200);
+        bgAlphaAnim.setStartDelay(150);
+        bgAlphaAnim.setInterpolator(DECCELERATE_INTERPOLATOR);
 
-            ObjectAnimator imgScaleUpYAnim = ObjectAnimator.ofFloat(holder.ivLike, "scaleY", 0.1f, 1f);
-            imgScaleUpYAnim.setDuration(300);
-            imgScaleUpYAnim.setInterpolator(DECCELERATE_INTERPOLATOR);
-            ObjectAnimator imgScaleUpXAnim = ObjectAnimator.ofFloat(holder.ivLike, "scaleX", 0.1f, 1f);
-            imgScaleUpXAnim.setDuration(300);
-            imgScaleUpXAnim.setInterpolator(DECCELERATE_INTERPOLATOR);
+        ObjectAnimator imgScaleUpYAnim = ObjectAnimator.ofFloat(holder.ivLike, "scaleY", 0.1f, 1f);
+        imgScaleUpYAnim.setDuration(300);
+        imgScaleUpYAnim.setInterpolator(DECCELERATE_INTERPOLATOR);
+        ObjectAnimator imgScaleUpXAnim = ObjectAnimator.ofFloat(holder.ivLike, "scaleX", 0.1f, 1f);
+        imgScaleUpXAnim.setDuration(300);
+        imgScaleUpXAnim.setInterpolator(DECCELERATE_INTERPOLATOR);
 
-            ObjectAnimator imgScaleDownYAnim = ObjectAnimator.ofFloat(holder.ivLike, "scaleY", 1f, 0f);
-            imgScaleDownYAnim.setDuration(300);
-            imgScaleDownYAnim.setInterpolator(ACCELERATE_INTERPOLATOR);
-            ObjectAnimator imgScaleDownXAnim = ObjectAnimator.ofFloat(holder.ivLike, "scaleX", 1f, 0f);
-            imgScaleDownXAnim.setDuration(300);
-            imgScaleDownXAnim.setInterpolator(ACCELERATE_INTERPOLATOR);
+        ObjectAnimator imgScaleDownYAnim = ObjectAnimator.ofFloat(holder.ivLike, "scaleY", 1f, 0f);
+        imgScaleDownYAnim.setDuration(300);
+        imgScaleDownYAnim.setInterpolator(ACCELERATE_INTERPOLATOR);
+        ObjectAnimator imgScaleDownXAnim = ObjectAnimator.ofFloat(holder.ivLike, "scaleX", 1f, 0f);
+        imgScaleDownXAnim.setDuration(300);
+        imgScaleDownXAnim.setInterpolator(ACCELERATE_INTERPOLATOR);
 
-            animatorSet.playTogether(bgScaleYAnim, bgScaleXAnim, bgAlphaAnim, imgScaleUpYAnim, imgScaleUpXAnim);
-            animatorSet.play(imgScaleDownYAnim).with(imgScaleDownXAnim).after(imgScaleUpYAnim);
+        animatorSet.playTogether(bgScaleYAnim, bgScaleXAnim, bgAlphaAnim, imgScaleUpYAnim, imgScaleUpXAnim);
+        animatorSet.play(imgScaleDownYAnim).with(imgScaleDownXAnim).after(imgScaleUpYAnim);
 
-            animatorSet.addListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    resetLikeAnimationState(holder);
-                }
-            });
-            animatorSet.start();
-        //}
+        animatorSet.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                resetLikeAnimationState(holder);
+            }
+        });
+        animatorSet.start();
     }
 
-    public void updateItems() {
-        itemsCount = 10;
-        //animateItems = animated;
-        fillLikesWithRandomValues();
+    public void updateItems(List<AVObject> list) {
+        itemsCount = list.size();
+        feedList = list;
+        initLikedCount();
         notifyDataSetChanged();
     }
 
-    private void fillLikesWithRandomValues() {
+    private void initLikedCount() {
         for (int i = 0; i < getItemCount(); i++) {
-            likesCount.put(i, new Random().nextInt(100));
+            likesCount.put(i, feedList.get(i).getInt("likedCount"));
+        }
+    }
+
+    private void runEnterAnimation(View view, int position) {
+        if (position >= ANIMATED_ITEMS_COUNT - 1) {
+            return;
+        }
+
+        if (position > lastAnimatedPosition) {
+            lastAnimatedPosition = position;
+            view.setTranslationY(Utils.getScreenHeight(context));
+            view.animate()
+                    .translationY(0)
+                    .setInterpolator(new DecelerateInterpolator(3.f))
+                    .setDuration(700)
+                    .start();
         }
     }
 
     @Override
-    public void onClick(View v) {
-        final int viewId = v.getId();
-        if (viewId == R.id.btnComments) {
+    public void onClick(View view) {
+        if (!isFastClick() && LoginActivity.checkLogin((Activity) context)) {
+            clickViewID(view);
+        }
+    }
+
+    private void clickViewID(View view) {
+
+        final int viewId = view.getId();
+        if (viewId == R.id.btnComments) {       //点击评论
             if (onFeedItemClickListener != null) {
-                onFeedItemClickListener.onCommentsClick(v, (Integer) v.getTag());
+                CellFeedViewHolder holder = (CellFeedViewHolder) view.getTag();
+                onFeedItemClickListener.onCommentsClick(view, holder.feedCommentsId);
             }
-        } else if (viewId == R.id.btnLike) {
-            CellFeedViewHolder holder = (CellFeedViewHolder) v.getTag();
-            if (!likedPositions.contains(holder.getPosition())) {
-                likedPositions.add(holder.getPosition());
-                updateLikesCounter(holder, true);
+        } else if (viewId == R.id.btnLike) {    //点击爱心
+            CellFeedViewHolder holder = (CellFeedViewHolder) view.getTag();
+            if (!likedPositions.contains(holder.getAdapterPosition())) {
+                likedPositions.add(holder.getAdapterPosition());
+                updateLikesCounter(holder, true, LIKE_ADD);
+                updateHeartButton(holder, true);
+            } else {
+                likedPositions.clear();
+                holder.btnLike.setImageResource(R.drawable.ic_heart_outline_grey);
+                updateLikesCounter(holder, true, LIKE_SUB);
+
+            }
+        } else if (viewId == R.id.ivFeedCenter) {   //点击图片
+            CellFeedViewHolder holder = (CellFeedViewHolder) view.getTag();
+            if (!likedPositions.contains(holder.getAdapterPosition())) {
+                likedPositions.add(holder.getAdapterPosition());
+                updateLikesCounter(holder, true, LIKE_ADD);
+                updateHeartButton(holder, true);
                 animatePhotoLike(holder);
-                updateHeartButton(holder, false);
+
             }
-        }else if (viewId == R.id.ivUserProfile) {
+        } else if (viewId == R.id.ivUserAvatar) {//用户
             if (onFeedItemClickListener != null) {
-                onFeedItemClickListener.onProfileClick(v);
+                onFeedItemClickListener.onProfileClick(view);
             }
         }
     }

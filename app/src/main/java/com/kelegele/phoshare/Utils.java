@@ -7,6 +7,8 @@ import android.os.Build;
 import android.view.Display;
 import android.view.WindowManager;
 
+import java.util.regex.Pattern;
+
 public class Utils {
     private static int screenWidth = 0;
     private static int screenHeight = 0;
@@ -41,7 +43,32 @@ public class Utils {
         return screenWidth;
     }
 
-    public static boolean isAndroid5() {
+    public static boolean isAboveAndroid5() {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP;
     }
+
+    // 两次点击间隔不能少于1000ms
+    private static final int FAST_CLICK_DELAY_TIME = 1000;
+    private static long lastClickTime;
+
+    public static boolean isFastClick() {
+        boolean flag = true;
+        long currentClickTime = System.currentTimeMillis();
+        if ((currentClickTime - lastClickTime) >= FAST_CLICK_DELAY_TIME ) {
+            flag = false;
+        }
+        lastClickTime = currentClickTime;
+        return flag;
+    }
+
+    /**
+     *  正则：手机号（简单）, 1字头＋10位数字即可.
+     * @param in
+     * @return
+     */
+    public static boolean validateMobilePhone(String in) {
+        Pattern pattern = Pattern.compile("^[1]\\d{10}$");
+        return pattern.matcher(in).matches();
+    }
+
 }

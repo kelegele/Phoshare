@@ -5,8 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="?attr/actionBarSize"
     android:background="?attr/colorPrimary"
-    app:elevation="@dimen/default_elevation"
-    app:layout_scrollFlags="scroll|enterAlways"
+    android:elevation="@dimen/default_elevation"
     app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
     <ImageView
@@ -15,5 +14,6 @@
         android:layout_height="match_parent"
         android:layout_gravity="center"
         android:scaleType="center"
-        android:src="@drawable/img_toolbar_logo" />
+        android:src="@drawable/img_toolbar_logo"
+        android:contentDescription="TODO" />
 </androidx.appcompat.widget.Toolbar>

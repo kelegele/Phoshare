@@ -14,7 +14,11 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.kelegele.phoshare.R;
 import com.kelegele.phoshare.utils.RoundedTransformation;
+import com.squareup.picasso.MemoryPolicy;
 import com.squareup.picasso.Picasso;
+
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -24,6 +28,7 @@ public class CommentsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     private int itemsCount = 0;
     private int lastAnimatedPosition = -1;
     private int avatarSize;
+    private ArrayList<HashMap<String,String>> commentList;
 
     private boolean animationsLocked = false;
     private boolean delayEnterAnimation = true;
@@ -43,22 +48,17 @@ public class CommentsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     public void onBindViewHolder(RecyclerView.ViewHolder viewHolder, int position) {
         runEnterAnimation(viewHolder.itemView, position);
         CommentViewHolder holder = (CommentViewHolder) viewHolder;
-        switch (position % 3) {
-            case 0:
-                holder.tvComment.setText("Lorem ipsum dolor sit amet, consectetur adipisicing elit.");
-                break;
-            case 1:
-                holder.tvComment.setText("Cupcake ipsum dolor sit amet bear claw.");
-                break;
-            case 2:
-                holder.tvComment.setText("Cupcake ipsum dolor sit. Amet gingerbread cupcake. Gummies ice cream dessert icing marzipan apple pie dessert sugar plum.");
-                break;
-        }
+        //加载评论
+        HashMap<String,String> item = commentList.get(position);
 
-        //context
+        holder.tvComment.setText(item.get("userComment"));
+        holder.userName.setText(item.get("userName"));
+
+        //头像
         Picasso.get()
-                .load(R.drawable.ic_launcher)
+                .load(item.get("userAvatar"))
                 .centerCrop()
+                .memoryPolicy(MemoryPolicy.NO_CACHE,MemoryPolicy.NO_STORE)
                 .resize(avatarSize, avatarSize)
                 .transform(new RoundedTransformation())
                 .into(holder.ivUserAvatar);
@@ -91,13 +91,15 @@ public class CommentsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         return itemsCount;
     }
 
-    public void updateItems() {
-        itemsCount = 10;
+    public void updateItems(ArrayList<HashMap<String,String>> arr) {
+        commentList = arr;
+        itemsCount = arr.size();
         notifyDataSetChanged();
     }
 
-    public void addItem() {
+    public void addItem(HashMap<String,String> item) {
         itemsCount++;
+        commentList.add(item);
         notifyItemInserted(itemsCount - 1);
     }
 
@@ -114,6 +116,8 @@ public class CommentsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         ImageView ivUserAvatar;
         @BindView(R.id.tvComment)
         TextView tvComment;
+        @BindView(R.id.tvCommentUserName)
+        TextView userName;
 
         public CommentViewHolder(View view) {
             super(view);

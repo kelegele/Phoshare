@@ -5,7 +5,7 @@
     tools:context=".activity.MainActivity">
     <item
         android:id="@+id/action_inbox"
-        android:icon="@drawable/ic_inbox_white"
+        android:icon="@drawable/ic_global_menu_news_white"
         android:title="@string/inbox"
         app:showAsAction="always" />
 </menu>

@@ -8,7 +8,19 @@
     <androidx.drawerlayout.widget.DrawerLayout
         android:id="@+id/drawerLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:fitsSystemWindows="true">
+
+<!--        <FrameLayout-->
+<!--            android:id="@+id/vContentFrame"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="match_parent" />-->
+
+<!--        <FrameLayout-->
+<!--            android:id="@+id/vLeftDrawer"-->
+<!--            android:layout_width="280dp"-->
+<!--            android:layout_height="match_parent"-->
+<!--            android:layout_gravity="start" />-->
 
         <FrameLayout
             android:id="@+id/flContentRoot"

@@ -34,7 +34,7 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvComments"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:scrollbars="none" />
 
@@ -48,10 +48,10 @@
             <EditText
                 android:id="@+id/etComment"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
+                android:layout_height="64dp"
+                android:layout_weight="2"
                 android:textColor="#555555"
-                android:textSize="14sp" />
+                android:textSize="16sp" />
 
             <com.kelegele.phoshare.view.SendCommentButton
                 android:id="@+id/btnSendComment"
