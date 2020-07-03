@@ -4,6 +4,7 @@ import android.app.Application;
 
 import timber.log.Timber;
 
+//主类
 public class PhoshareApplication extends Application {
     @Override
     public void onCreate() {
